@@ -25,7 +25,7 @@ function App() {
     const params = new URLSearchParams(hash.substring(1))
 
     // Handle GDrive token
-    const driveToken = params.get('access_token')
+    const driveToken = params.get('access_token') || params.get('token')
     if (driveToken) {
       setAccessToken(driveToken)
       setIsLinked(true)
