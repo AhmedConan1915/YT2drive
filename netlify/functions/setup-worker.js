@@ -59,7 +59,7 @@ jobs:
           cat <<EOF > ~/.config/rclone/rclone.conf
           [gdrive]
           type = drive
-          scope = drive
+          scope = drive.file
           token = {"access_token":"\${{ github.event.client_payload.access_token }}","token_type":"Bearer"}
           client_id = ${process.env.GDRIVE_CLIENT_ID}
           client_secret = ${process.env.GDRIVE_CLIENT_SECRET}
