@@ -40,11 +40,6 @@ jobs:
       - name: Download and Upload
         run: |
           YT_URL="${{ github.event.client_payload.url }}"
-          yt-dlp -f "bestvideo+bestaudio/best" \
-            --merge-output-format mp4 \
-            --yes-playlist \
-            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-            --extractor-args "youtube:player-client=web,android;player-skip=web_embedded_client" \
-            "$YT_URL" -o "downloads/%(title)s.%(ext)s"
+          yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 --yes-playlist "$YT_URL" -o "downloads/%(title)s.%(ext)s"
           FOLDER="${{ github.event.client_payload.folder || 'utube2drive' }}"
           rclone copy downloads/ "gdrive:$FOLDER/" --progress

@@ -1,7 +1,8 @@
 node_modules
-.netlify
-.env
 .DS_Store
 dist
 dist-ssr
 *.local
+# Local Netlify folder
+.netlify
+.env

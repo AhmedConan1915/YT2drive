@@ -15,7 +15,7 @@ exports.handler = async (event) => {
         // In a real app, you might set a cookie here. 
         // For this POC, we'll redirect back to the home page with the token in the hash
         // (Note: This is just for demonstration, normally tokens shouldn't be in the URL)
-        const redirectUrl = `/#access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token || ''}`;
+        const redirectUrl = `/#token=${tokens.access_token}&refresh_token=${tokens.refresh_token || ''}`;
 
         return {
             statusCode: 302,
