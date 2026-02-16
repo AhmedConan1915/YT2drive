@@ -1,6 +1,8 @@
 exports.handler = async (event) => {
     const clientID = process.env.GITHUB_CLIENT_ID;
-    const siteUrl = process.env.SITE_URL || 'http://localhost:8888';
+    const protocol = event.headers['x-forwarded-proto'] || 'http';
+    const host = event.headers.host;
+    const siteUrl = `${protocol}://${host}`;
     const redirectURI = `${siteUrl}/.netlify/functions/callback-github`;
 
     console.log('GitHub Auth - SITE_URL:', process.env.SITE_URL);

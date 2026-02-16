@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import './index.css'
 
 function App() {
-  const [user, setUser] = useState(localStorage.getItem('gdrive_linked') ? { email: 'user@example.com', name: 'User' } : null)
-  const [authMode, setAuthMode] = useState(localStorage.getItem('gdrive_linked') ? 'authenticated' : 'login')
+  const [user, setUser] = useState(localStorage.getItem('gdrive_linked') || localStorage.getItem('auth_mode') === 'authenticated' ? { email: 'user@example.com', name: 'User' } : null)
+  const [authMode, setAuthMode] = useState(localStorage.getItem('gdrive_linked') || localStorage.getItem('auth_mode') === 'authenticated' ? 'authenticated' : 'login')
   const [isLinked, setIsLinked] = useState(localStorage.getItem('gdrive_linked') === 'true')
   const [url, setUrl] = useState('')
   const [folder, setFolder] = useState('utube2drive')
@@ -170,6 +170,7 @@ function App() {
             <button className="btn-primary" onClick={() => {
               setUser({ email: 'guest@example.com', name: 'Guest' })
               setAuthMode('authenticated')
+              localStorage.setItem('auth_mode', 'authenticated')
             }}>Start Using App</button>
             <p className="subtitle" style={{ marginTop: '1rem' }}>No account needed to start trial</p>
           </div>
