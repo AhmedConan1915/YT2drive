@@ -3,7 +3,7 @@
   publish = "dist"
 
 [functions]
-  node_bundle = true
+  node_bundler = "esbuild"
 
 [[redirects]]
   from = "/*"
