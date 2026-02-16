@@ -7,7 +7,7 @@ function App() {
     return savedUser ? JSON.parse(savedUser) : null
   })
   const [authMode, setAuthMode] = useState(localStorage.getItem('user_profile') ? 'authenticated' : 'login')
-  const [isLinked, setIsLinked] = useState(localStorage.getItem('gdrive_linked') === 'true')
+  const [isLinked, setIsLinked] = useState(localStorage.getItem('gdrive_token') ? true : false)
   const [url, setUrl] = useState('')
   const [folder, setFolder] = useState('utube2drive')
   const [isTransferring, setIsTransferring] = useState(false)
@@ -15,15 +15,11 @@ function App() {
   const [accessToken, setAccessToken] = useState(localStorage.getItem('gdrive_token') || '')
   const [progressStatus, setProgressStatus] = useState(null)
 
-  // New state for GitHub worker
+  // State for GitHub
   const [githubToken, setGithubToken] = useState(localStorage.getItem('gh_token') || '')
   const [githubUser, setGithubUser] = useState(localStorage.getItem('gh_user') || '')
   const [transferCount, setTransferCount] = useState(parseInt(localStorage.getItem('t_count') || '0'))
   const [isSettingUpWorker, setIsSettingUpWorker] = useState(false)
-
-  // Manual PAT state
-  const [showManualMode, setShowManualMode] = useState(false)
-  const [manualToken, setManualToken] = useState('')
 
   useEffect(() => {
     const hash = window.location.hash
@@ -56,6 +52,7 @@ function App() {
     if (ghToken) {
       setGithubToken(ghToken)
       localStorage.setItem('gh_token', ghToken)
+      setAuthMode('authenticated') // Ensure we stay in authenticated mode
       setupWorker(ghToken)
       window.history.replaceState(null, '', window.location.pathname)
     }
