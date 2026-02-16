@@ -12,7 +12,7 @@ exports.handler = async (event) => {
         if (github_token && github_user) {
             // User is using their own worker
             targetOwner = github_user;
-            targetRepo = 'YT2drive-worker';
+            targetRepo = 'utube2drive-worker';
             targetAuthToken = github_token;
         } else if (is_trial) {
             // User is using the developer's worker (limited trial)

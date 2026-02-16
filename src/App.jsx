@@ -121,7 +121,7 @@ function App() {
       <div className="bg-blobs"><div className="blob"></div><div className="blob blob-2"></div></div>
       <div className="container">
         <header>
-          <h1>YT2drive</h1>
+          <h1>utube2drive</h1>
           <p className="subtitle">Cloud-to-Cloud YouTube Downloader</p>
         </header>
 
