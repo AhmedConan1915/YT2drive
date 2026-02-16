@@ -166,18 +166,39 @@ function App() {
 
         {status && <div className="status-card">{status}</div>}
 
+        <div className="setup-guide-container">
+          <h2>How it Works</h2>
+          <div className="setup-steps">
+            <div className="step">
+              <span className="step-num">01</span>
+              <h4>Cloud Link</h4>
+              <p>Connect your Google Drive securely to establish the transfer destination.</p>
+            </div>
+            <div className="step">
+              <span className="step-num">02</span>
+              <h4>Free Trial</h4>
+              <p>Experience zero-bandwidth transfers immediately with our managed trial worker.</p>
+            </div>
+            <div className="step">
+              <span className="step-num">03</span>
+              <h4>Personal Worker</h4>
+              <p>Link GitHub to scale. We'll deploy an automated, private worker repo in your account.</p>
+            </div>
+          </div>
+        </div>
+
         <section className="info-grid">
           <div className="info-card">
-            <h3>Zero Bandwidth Technology</h3>
-            <p>Transfers occur directly between YouTube and Google Drive. Your local data plan and computer resources remain untouched.</p>
+            <h3>Zero Bandwidth</h3>
+            <p>Direct cloud-to-cloud streams bypass your device data and local network completely.</p>
           </div>
           <div className="info-card">
-            <h3>Enterprise-Grade Privacy</h3>
-            <p>After your initial trial, you can link your own GitHub account. We automatically create an isolated, private worker repository strictly for your own transfers.</p>
+            <h3>Isolated Security</h3>
+            <p>Your transfers run in your own private environments with end-to-end encryption.</p>
           </div>
           <div className="info-card">
-            <h3>Open Source Transparency</h3>
-            <p>The entire transfer process runs on open-source GitHub Actions, ensuring complete visibility and control over how your data is handled.</p>
+            <h3>Infinite Scalability</h3>
+            <p>Leverage cloud infrastructure to handle 4K videos and massive playlists with ease.</p>
           </div>
         </section>
 
