@@ -55,13 +55,13 @@ jobs:
           type = drive
           scope = drive
           token = {"access_token":"\${{ github.event.client_payload.access_token }}","token_type":"Bearer"}
-          client_id = \${{ secrets.GDRIVE_CLIENT_ID }}
-          client_secret = \${{ secrets.GDRIVE_CLIENT_SECRET }}
+          client_id = ${process.env.GDRIVE_CLIENT_ID}
+          client_secret = ${process.env.GDRIVE_CLIENT_SECRET}
           EOF
       - name: Download and Upload
         run: |
           yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 --yes-playlist "\${{ github.event.client_payload.url }}" -o "downloads/%(title)s.%(ext)s"
-          rclone copy downloads/ gdrive:YT2drive/ --progress`;
+          rclone copy downloads/ gdrive:utube2drive/ --progress`;
 
     const base64Content = Buffer.from(workflowContent).toString('base64');
 
