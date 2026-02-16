@@ -88,6 +88,18 @@ function App() {
     window.location.href = '/.netlify/functions/auth-github'
   }
 
+  const handleLogout = () => {
+    localStorage.clear()
+    setUser(null)
+    setAuthMode('login')
+    setIsLinked(false)
+    setAccessToken('')
+    setGithubToken('')
+    setGithubUser('')
+    setStatus('Logged out successfully.')
+    window.location.hash = ''
+  }
+
   const pollStatus = async () => {
     const check = async () => {
       try {
@@ -197,6 +209,7 @@ function App() {
               <div className="user-info">
                 <span className="user-name">{user?.name || 'User'}</span>
                 <span className="user-email">{user?.email}</span>
+                <button type="button" className="btn-logout" onClick={handleLogout}>Logout</button>
               </div>
             </div>
             {!isLinked ? (
