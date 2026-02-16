@@ -152,12 +152,16 @@ function App() {
         setStatus('Transfer queued! Tracking progress...')
         pollStatus();
       } else {
-        setStatus('Failed to trigger transfer.')
+        const errorData = await response.json();
+        setStatus('Failed to trigger transfer: ' + (errorData.error || 'Unknown error'));
         setIsTransferring(false)
+        setProgressStatus(null)
       }
     } catch (err) {
-      setStatus('An error occurred.')
+      console.error('Transfer error:', err)
+      setStatus('An error occurred while connecting to the cloud.')
       setIsTransferring(false)
+      setProgressStatus(null)
     }
   }
 

@@ -26,6 +26,8 @@ exports.handler = async (event) => {
             };
         }
 
+        console.log(`Triggering dispatch for ${targetOwner}/${targetRepo} using token: ${targetAuthToken.substring(0, 7)}...`);
+
         await axios.post(
             `https://api.github.com/repos/${targetOwner}/${targetRepo}/dispatches`,
             {
@@ -49,7 +51,11 @@ exports.handler = async (event) => {
             body: JSON.stringify({ message: 'Transfer queued successfully!' })
         };
     } catch (error) {
-        console.error('Trigger error:', error.response?.data || error.message);
-        return { statusCode: 500, body: 'Failed to trigger transfer.' };
+        const errorData = error.response?.data || error.message;
+        console.error('Trigger error:', JSON.stringify(errorData));
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Failed to trigger transfer.', details: errorData })
+        };
     }
 };
