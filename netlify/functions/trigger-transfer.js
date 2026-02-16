@@ -50,6 +50,12 @@ exports.handler = async (event) => {
         };
     } catch (error) {
         console.error('Trigger error:', error.response?.data || error.message);
-        return { statusCode: 500, body: 'Failed to trigger transfer.' };
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: 'Failed to trigger transfer.',
+                details: error.response?.data || error.message
+            })
+        };
     }
 };
