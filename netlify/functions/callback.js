@@ -15,11 +15,18 @@ exports.handler = async (event) => {
 
     try {
         const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
 
-        // In a real app, you might set a cookie here. 
-        // For this POC, we'll redirect back to the home page with the token in the hash
-        // (Note: This is just for demonstration, normally tokens shouldn't be in the URL)
-        const redirectUrl = `/#token=${tokens.access_token}&refresh_token=${tokens.refresh_token || ''}`;
+        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+        const userInfo = await oauth2.userinfo.get();
+
+        const userData = {
+            name: userInfo.data.name,
+            email: userInfo.data.email,
+            picture: userInfo.data.picture
+        };
+
+        const redirectUrl = `/#token=${tokens.access_token}&refresh_token=${tokens.refresh_token || ''}&user=${encodeURIComponent(JSON.stringify(userData))}`;
 
         return {
             statusCode: 302,

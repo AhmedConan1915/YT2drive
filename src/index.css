@@ -409,22 +409,45 @@ header h1 {
 }
 
 @keyframes dots {
+  0%, 20% { content: ' .'; }
+  40% { content: ' . .'; }
+  60% { content: ' . . .'; }
+  80%, 100% { content: ''; }
+}
 
-  0%,
-  20% {
-    content: ' .';
-  }
+/* User Profile Styles */
+.user-profile-mini {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  text-align: left;
+}
 
-  40% {
-    content: ' . .';
-  }
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--secondary);
+  background: var(--bg);
+}
 
-  60% {
-    content: ' . . .';
-  }
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
 
-  80%,
-  100% {
-    content: '';
-  }
+.user-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: white;
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: var(--text-dim);
 }

@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react'
 import './index.css'
 
 function App() {
-  const [user, setUser] = useState(localStorage.getItem('gdrive_linked') || localStorage.getItem('auth_mode') === 'authenticated' ? { email: 'user@example.com', name: 'User' } : null)
-  const [authMode, setAuthMode] = useState(localStorage.getItem('gdrive_linked') || localStorage.getItem('auth_mode') === 'authenticated' ? 'authenticated' : 'login')
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user_profile')
+    return savedUser ? JSON.parse(savedUser) : null
+  })
+  const [authMode, setAuthMode] = useState(localStorage.getItem('user_profile') ? 'authenticated' : 'login')
   const [isLinked, setIsLinked] = useState(localStorage.getItem('gdrive_linked') === 'true')
   const [url, setUrl] = useState('')
   const [folder, setFolder] = useState('utube2drive')
@@ -24,6 +27,15 @@ function App() {
 
     const params = new URLSearchParams(hash.substring(1))
 
+    // Handle User Data
+    const rawUser = params.get('user')
+    if (rawUser) {
+      const decodedUser = JSON.parse(decodeURIComponent(rawUser))
+      setUser(decodedUser)
+      localStorage.setItem('user_profile', JSON.stringify(decodedUser))
+      setAuthMode('authenticated')
+    }
+
     // Handle GDrive token
     const driveToken = params.get('access_token') || params.get('token')
     if (driveToken) {
@@ -31,8 +43,6 @@ function App() {
       setIsLinked(true)
       localStorage.setItem('gdrive_token', driveToken)
       localStorage.setItem('gdrive_linked', 'true')
-      setUser({ email: 'user@example.com', name: 'User' })
-      setAuthMode('authenticated')
       setStatus('Google Drive linked!')
       window.history.replaceState(null, '', window.location.pathname)
     }
@@ -167,15 +177,20 @@ function App() {
 
         {authMode !== 'authenticated' ? (
           <div className="auth-section">
-            <button className="btn-primary" onClick={() => {
-              setUser({ email: 'guest@example.com', name: 'Guest' })
-              setAuthMode('authenticated')
-              localStorage.setItem('auth_mode', 'authenticated')
-            }}>Start Using App</button>
-            <p className="subtitle" style={{ marginTop: '1rem' }}>No account needed to start trial</p>
+            <button className="btn-primary" onClick={() => window.location.href = '/.netlify/functions/auth'}>
+              Login with Google
+            </button>
+            <p className="subtitle" style={{ marginTop: '1rem' }}>Securely access your Drive to start transfers</p>
           </div>
         ) : (
           <div className="app-content">
+            <div className="user-profile-mini">
+              {user?.picture && <img src={user.picture} alt={user.name} className="user-avatar" />}
+              <div className="user-info">
+                <span className="user-name">{user?.name || 'User'}</span>
+                <span className="user-email">{user?.email}</span>
+              </div>
+            </div>
             {!isLinked ? (
               <div className="auth-step">
                 <span className="label-badge">Step 1: Authorization</span>
