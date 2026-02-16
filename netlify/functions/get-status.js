@@ -10,8 +10,7 @@ exports.handler = async (event) => {
             targetOwner = github_user;
             targetRepo = 'utube2drive-worker';
             targetAuthToken = github_token;
-        } else if (is_trial || !github_token) {
-            // Allow status check for trial or when just starting
+        } else if (is_trial) {
             targetOwner = process.env.REPO_OWNER;
             targetRepo = process.env.REPO_NAME;
             targetAuthToken = process.env.GITHUB_PAT;

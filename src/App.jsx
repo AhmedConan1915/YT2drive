@@ -2,25 +2,15 @@ import { useState, useEffect } from 'react'
 import './index.css'
 
 function App() {
-  // Helper to get initial state from URL or Cache
-  const getInitialToken = () => {
-    const hash = window.location.hash
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1))
-      return params.get('access_token') || params.get('token') || localStorage.getItem('gdrive_token') || ''
-    }
-    return localStorage.getItem('gdrive_token') || ''
-  }
-
-  const [accessToken, setAccessToken] = useState(getInitialToken)
-  const [isLinked, setIsLinked] = useState(!!getInitialToken())
-  const [authMode, setAuthMode] = useState(getInitialToken() || localStorage.getItem('guest_auth') ? 'authenticated' : 'login')
+  const [user, setUser] = useState(null)
+  const [authMode, setAuthMode] = useState('login')
+  const [isLinked, setIsLinked] = useState(false)
   const [url, setUrl] = useState('')
   const [folder, setFolder] = useState('utube2drive')
   const [isTransferring, setIsTransferring] = useState(false)
   const [status, setStatus] = useState('')
+  const [accessToken, setAccessToken] = useState('')
   const [progressStatus, setProgressStatus] = useState(null)
-  const [user, setUser] = useState(null)
 
   // New state for GitHub worker
   const [githubToken, setGithubToken] = useState(localStorage.getItem('gh_token') || '')
@@ -35,17 +25,14 @@ function App() {
     const params = new URLSearchParams(hash.substring(1))
 
     // Handle GDrive token
-    const driveToken = params.get('access_token') || params.get('token')
+    const driveToken = params.get('access_token')
     if (driveToken) {
       setAccessToken(driveToken)
-      localStorage.setItem('gdrive_token', driveToken)
       setIsLinked(true)
+      setUser({ email: 'user@example.com', name: 'User' })
       setAuthMode('authenticated')
       setStatus('Google Drive linked!')
-      // Small delay to let state settle before clearing URL (Strict Mode proofing)
-      setTimeout(() => {
-        window.history.replaceState(null, '', window.location.pathname)
-      }, 100);
+      window.history.replaceState(null, '', window.location.pathname)
     }
 
     // Handle GitHub token
@@ -54,9 +41,7 @@ function App() {
       setGithubToken(ghToken)
       localStorage.setItem('gh_token', ghToken)
       setupWorker(ghToken)
-      setTimeout(() => {
-        window.history.replaceState(null, '', window.location.pathname)
-      }, 100);
+      window.history.replaceState(null, '', window.location.pathname)
     }
   }, [])
 
@@ -164,11 +149,6 @@ function App() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.clear()
-    window.location.href = window.location.pathname
-  }
-
   // UI helpers
   const isTrialFinished = transferCount >= 1
   const showGithubLink = !githubToken
@@ -188,7 +168,6 @@ function App() {
             <button className="btn-primary" onClick={() => {
               setUser({ email: 'guest@example.com', name: 'Guest' })
               setAuthMode('authenticated')
-              localStorage.setItem('guest_auth', 'true')
             }}>Start Using App</button>
             <p className="subtitle" style={{ marginTop: '1rem' }}>No account needed to start trial</p>
           </div>
@@ -320,12 +299,7 @@ function App() {
           </div>
         </section>
 
-        <footer className="credits">
-          <div style={{ marginBottom: '1rem' }}>
-            <button onClick={handleLogout} className="btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.6rem' }}>Reset Session / Logout</button>
-          </div>
-          DESIGNED & DEVELOPED BY <span>AHMED EMAD</span>
-        </footer>
+        <footer className="credits">DESIGNED & DEVELOPED BY <span>AHMED EMAD</span></footer>
       </div>
     </div>
   )

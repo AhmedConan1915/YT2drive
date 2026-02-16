@@ -1,6 +1,11 @@
 exports.handler = async (event) => {
     const clientID = process.env.GITHUB_CLIENT_ID;
-    const redirectURI = `${process.env.SITE_URL}/.netlify/functions/callback-github`;
+    const siteUrl = process.env.SITE_URL || 'http://localhost:8888';
+    const redirectURI = `${siteUrl}/.netlify/functions/callback-github`;
+
+    console.log('GitHub Auth - SITE_URL:', process.env.SITE_URL);
+    console.log('GitHub Auth - Redirect URI:', redirectURI);
+
     const scope = 'repo,workflow';
 
     const url = `https://github.com/login/oauth/authorize?client_id=${clientID}&redirect_uri=${encodeURIComponent(redirectURI)}&scope=${encodeURIComponent(scope)}&state=${Math.random().toString(36).substring(7)}`;

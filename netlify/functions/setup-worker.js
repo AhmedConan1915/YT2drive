@@ -43,10 +43,16 @@ jobs:
   transfer:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Deno (for signature extraction)
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "\$HOME/.deno/bin" >> \$GITHUB_PATH
       - name: Install yt-dlp
-        run: pip install yt-dlp
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U yt-dlp
       - name: Install rclone
-        run: curl https://rclone.org/install.sh | sudo bash
+        run: sudo -v ; curl https://rclone.org/install.sh | sudo bash
       - name: Configure rclone
         run: |
           mkdir -p ~/.config/rclone
@@ -60,7 +66,16 @@ jobs:
           EOF
       - name: Download and Upload
         run: |
-          yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 --yes-playlist "\${{ github.event.client_payload.url }}" -o "downloads/%(title)s.%(ext)s"
+          YT_URL="\${{ github.event.client_payload.url }}"
+          yt-dlp \
+            -f "bestvideo+bestaudio/best" \
+            --merge-output-format mp4 \
+            --yes-playlist \
+            --extractor-args "youtube:player_client=android,web" \
+            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+            --referer "https://www.google.com/" \
+            "\$YT_URL" -o "downloads/%(title)s.%(ext)s"
+          
           FOLDER="\${{ github.event.client_payload.folder || 'utube2drive' }}"
           rclone copy downloads/ "gdrive:\$FOLDER/" --progress`;
 
