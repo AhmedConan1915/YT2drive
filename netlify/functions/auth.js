@@ -22,7 +22,8 @@ exports.handler = async (event) => {
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: scopes,
-        prompt: 'consent'
+        prompt: 'consent',
+        state: siteUrl
     });
 
     return {

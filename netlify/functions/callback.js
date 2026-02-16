@@ -14,6 +14,9 @@ exports.handler = async (event) => {
     );
 
     try {
+        const { state } = event.queryStringParameters;
+        const origin = state || siteUrl;
+
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
 
@@ -26,7 +29,7 @@ exports.handler = async (event) => {
             picture: userInfo.data.picture
         };
 
-        const redirectUrl = `/#token=${tokens.access_token}&refresh_token=${tokens.refresh_token || ''}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+        const redirectUrl = `${origin}/#token=${tokens.access_token}&refresh_token=${tokens.refresh_token || ''}&user=${encodeURIComponent(JSON.stringify(userData))}`;
 
         return {
             statusCode: 302,

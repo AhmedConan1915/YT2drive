@@ -4,6 +4,9 @@ exports.handler = async (event) => {
     const { code } = event.queryStringParameters;
 
     try {
+        const { state } = event.queryStringParameters;
+        const origin = state || '';
+
         const response = await axios.post('https://github.com/login/oauth/access_token', {
             client_id: process.env.GITHUB_CLIENT_ID,
             client_secret: process.env.GITHUB_CLIENT_SECRET,
@@ -15,7 +18,7 @@ exports.handler = async (event) => {
         });
 
         const { access_token } = response.data;
-        const redirectUrl = `/#github_token=${access_token}`;
+        const redirectUrl = `${origin}/#github_token=${access_token}`;
 
         return {
             statusCode: 302,
