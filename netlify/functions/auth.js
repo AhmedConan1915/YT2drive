@@ -4,7 +4,7 @@ exports.handler = async (event) => {
     const oauth2Client = new google.auth.OAuth2(
         process.env.GDRIVE_CLIENT_ID,
         process.env.GDRIVE_CLIENT_SECRET,
-        `${process.env.URL}/.netlify/functions/callback`
+        `${process.env.SITE_URL}/.netlify/functions/callback`
     );
 
     const scopes = [
