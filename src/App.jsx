@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import './index.css'
 
 function App() {
-  const [user, setUser] = useState(null)
-  const [authMode, setAuthMode] = useState('login')
-  const [isLinked, setIsLinked] = useState(false)
+  const [user, setUser] = useState(localStorage.getItem('gdrive_linked') ? { email: 'user@example.com', name: 'User' } : null)
+  const [authMode, setAuthMode] = useState(localStorage.getItem('gdrive_linked') ? 'authenticated' : 'login')
+  const [isLinked, setIsLinked] = useState(localStorage.getItem('gdrive_linked') === 'true')
   const [url, setUrl] = useState('')
   const [folder, setFolder] = useState('utube2drive')
   const [isTransferring, setIsTransferring] = useState(false)
   const [status, setStatus] = useState('')
-  const [accessToken, setAccessToken] = useState('')
+  const [accessToken, setAccessToken] = useState(localStorage.getItem('gdrive_token') || '')
   const [progressStatus, setProgressStatus] = useState(null)
 
   // New state for GitHub worker
@@ -25,10 +25,12 @@ function App() {
     const params = new URLSearchParams(hash.substring(1))
 
     // Handle GDrive token
-    const driveToken = params.get('access_token')
+    const driveToken = params.get('access_token') || params.get('token')
     if (driveToken) {
       setAccessToken(driveToken)
       setIsLinked(true)
+      localStorage.setItem('gdrive_token', driveToken)
+      localStorage.setItem('gdrive_linked', 'true')
       setUser({ email: 'user@example.com', name: 'User' })
       setAuthMode('authenticated')
       setStatus('Google Drive linked!')
