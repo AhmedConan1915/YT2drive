@@ -5,7 +5,7 @@ exports.handler = async (event) => {
 
     const protocol = event.headers['x-forwarded-proto'] || 'http';
     const host = event.headers.host;
-    const siteUrl = `${protocol}://${host}`;
+    const siteUrl = process.env.SITE_URL || `${protocol}://${host}`;
 
     const oauth2Client = new google.auth.OAuth2(
         process.env.GDRIVE_CLIENT_ID,
