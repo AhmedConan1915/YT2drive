@@ -6,9 +6,11 @@ function App() {
   const [authMode, setAuthMode] = useState('login')
   const [isLinked, setIsLinked] = useState(false)
   const [url, setUrl] = useState('')
+  const [folder, setFolder] = useState('utube2drive')
   const [isTransferring, setIsTransferring] = useState(false)
   const [status, setStatus] = useState('')
   const [accessToken, setAccessToken] = useState('')
+  const [progressStatus, setProgressStatus] = useState(null)
 
   // New state for GitHub worker
   const [githubToken, setGithubToken] = useState(localStorage.getItem('gh_token') || '')
@@ -70,6 +72,39 @@ function App() {
     window.location.href = '/.netlify/functions/auth-github'
   }
 
+  const pollStatus = async () => {
+    const check = async () => {
+      try {
+        const res = await fetch('/.netlify/functions/get-status', {
+          method: 'POST',
+          body: JSON.stringify({
+            github_token: githubToken,
+            github_user: githubUser,
+            is_trial: transferCount < 1
+          })
+        });
+        const data = await res.json();
+        setProgressStatus(data);
+
+        if (data.status === 'completed' || data.conclusion === 'failure') {
+          setIsTransferring(false);
+          setStatus(data.conclusion === 'success' ? 'Transfer complete!' : 'Transfer failed. Check logs.');
+          return true; // Stop polling
+        }
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+      return false;
+    };
+
+    const interval = setInterval(async () => {
+      const stop = await check();
+      if (stop) clearInterval(interval);
+    }, 5000);
+
+    check(); // Initial check
+  };
+
   const handleTransfer = async (e) => {
     e.preventDefault()
     if (!url || !accessToken) return
@@ -81,7 +116,8 @@ function App() {
     }
 
     setIsTransferring(true)
-    setStatus('Queueing transfer...')
+    setStatus('Preparing secure cloud stream...')
+    setProgressStatus({ status: 'queued' })
 
     try {
       const response = await fetch('/.netlify/functions/trigger-transfer', {
@@ -89,6 +125,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url,
+          folder,
           access_token: accessToken,
           github_token: githubToken,
           github_user: githubUser,
@@ -100,21 +137,22 @@ function App() {
         const newCount = transferCount + 1
         setTransferCount(newCount)
         localStorage.setItem('t_count', newCount.toString())
-        setStatus('Transfer started! You can close this tab.')
-        setUrl('')
+        setStatus('Transfer queued! Tracking progress...')
+        pollStatus();
       } else {
         setStatus('Failed to trigger transfer.')
+        setIsTransferring(false)
       }
     } catch (err) {
       setStatus('An error occurred.')
-    } finally {
       setIsTransferring(false)
     }
   }
 
   // UI helpers
   const isTrialFinished = transferCount >= 1
-  const showGithubLink = !githubToken && (isTrialFinished || authMode === 'authenticated')
+  const showGithubLink = !githubToken
+  const isRunning = isTransferring || (progressStatus && (progressStatus.status === 'in_progress' || progressStatus.status === 'queued'))
 
   return (
     <div className="App">
@@ -136,29 +174,88 @@ function App() {
         ) : (
           <div className="app-content">
             {!isLinked ? (
-              <button className="btn-primary" onClick={() => window.location.href = '/.netlify/functions/auth'}>
-                Link Google Drive
-              </button>
+              <div className="auth-step">
+                <span className="label-badge">Step 1: Authorization</span>
+                <h3>Connect Google Drive</h3>
+                <p className="subtitle" style={{ marginBottom: '2rem' }}>Required to save videos to your account.</p>
+                <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => window.location.href = '/.netlify/functions/auth'}>
+                  Link My Drive
+                </button>
+              </div>
             ) : (
               <form onSubmit={handleTransfer}>
+                <span className="label-badge">{isTransferring ? 'Active Transfer' : 'New Transfer'}</span>
+
                 <div className="input-group">
-                  <label>YouTube URL</label>
-                  <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste link here..." />
+                  <label>YouTube Link (Video or Playlist)</label>
+                  <input
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    placeholder="https://youtube.com/..."
+                    disabled={isRunning}
+                  />
                 </div>
 
-                {showGithubLink && (
-                  <div className="gh-callout">
-                    <p>{isTrialFinished ? "Trial over!" : "Optional:"} Link your GitHub to use your own minutes.</p>
-                    <button type="button" className="btn-secondary" onClick={handleLinkGithub} disabled={isSettingUpWorker}>
-                      {isSettingUpWorker ? "Setting up..." : "Link GitHub"}
-                    </button>
+                <div className="input-group">
+                  <label>Destination Folder</label>
+                  <input
+                    value={folder}
+                    onChange={e => setFolder(e.target.value)}
+                    placeholder="utube2drive"
+                    disabled={isRunning}
+                  />
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>
+                    * We only add files, never delete.
+                  </p>
+                </div>
+
+                {isRunning && progressStatus && (
+                  <div className="progress-container">
+                    <span className="label-badge" style={{ background: 'rgba(14, 165, 233, 0.2)' }}>
+                      {progressStatus.status === 'queued' ? 'Initializing' : 'Transferring'}...
+                    </span>
+                    <div className="progress-bar-bg">
+                      <div className="progress-bar-fill" style={{ width: progressStatus.status === 'queued' ? '15%' : '65%' }}></div>
+                    </div>
+                    <div className="status-grid">
+                      <div className="status-mini-card">
+                        <label>Status</label>
+                        <span className={isRunning ? 'loading-dots' : ''}>
+                          {progressStatus.status === 'queued' ? 'In Queue' : 'Active'}
+                        </span>
+                      </div>
+                      <div className="status-mini-card">
+                        <label>Target</label>
+                        <span style={{ fontSize: '0.7rem' }}>{folder}/</span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <button type="submit" className="btn-primary" disabled={isTransferring || (isTrialFinished && !githubToken)}>
-                  {isTransferring ? 'Starting...' : isTrialFinished && !githubToken ? 'Link GitHub to Continue' : 'Transfer to Drive'}
-                </button>
-                {!githubToken && !isTrialFinished && <p className="trial-badge">1 Free Trial Remaining</p>}
+                {!isRunning && (
+                  <>
+                    <button
+                      type="submit"
+                      className="btn-primary btn-pulse"
+                      style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
+                      disabled={!url || (isTrialFinished && !githubToken)}
+                    >
+                      {isTrialFinished && !githubToken ? 'Link GitHub to Continue' : 'Start Transfer'}
+                    </button>
+
+                    {showGithubLink && (
+                      <div className="gh-callout">
+                        <span className="label-badge">GitHub Cloud Worker</span>
+                        <p>{isTrialFinished ? "Trial over!" : "Optional:"} Setup your own private transfer engine to remove all limits.</p>
+                        <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={handleLinkGithub} disabled={isSettingUpWorker}>
+                          {isSettingUpWorker ? "Configuring..." : "Link My GitHub Account"}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {!githubToken && !isTrialFinished && <p className="trial-badge">1 Free Trial Available</p>}
               </form>
             )}
           </div>

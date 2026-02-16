@@ -61,7 +61,8 @@ jobs:
       - name: Download and Upload
         run: |
           yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 --yes-playlist "\${{ github.event.client_payload.url }}" -o "downloads/%(title)s.%(ext)s"
-          rclone copy downloads/ gdrive:utube2drive/ --progress`;
+          FOLDER="\${{ github.event.client_payload.folder || 'utube2drive' }}"
+          rclone copy downloads/ "gdrive:\$FOLDER/" --progress`;
 
     const base64Content = Buffer.from(workflowContent).toString('base64');
 

@@ -41,4 +41,5 @@ jobs:
         run: |
           YT_URL="${{ github.event.client_payload.url }}"
           yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 --yes-playlist "$YT_URL" -o "downloads/%(title)s.%(ext)s"
-          rclone copy downloads/ gdrive:utube2drive/ --progress
+          FOLDER="${{ github.event.client_payload.folder || 'utube2drive' }}"
+          rclone copy downloads/ "gdrive:$FOLDER/" --progress

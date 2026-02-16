@@ -4,7 +4,7 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405 };
 
     try {
-        const { url, access_token, github_token, github_user, is_trial } = JSON.parse(event.body);
+        const { url, access_token, github_token, github_user, is_trial, folder } = JSON.parse(event.body);
 
         // Determine which repo and token to use
         let targetOwner, targetRepo, targetAuthToken;
@@ -32,7 +32,8 @@ exports.handler = async (event) => {
                 event_type: 'start-transfer',
                 client_payload: {
                     url: url,
-                    access_token: access_token
+                    access_token: access_token,
+                    folder: folder || 'utube2drive'
                 }
             },
             {
