@@ -88,14 +88,6 @@ function App() {
     window.location.href = '/.netlify/functions/auth-github'
   }
 
-  const handleSaveManualToken = async () => {
-    if (!manualToken) return
-    setGithubToken(manualToken)
-    localStorage.setItem('gh_token', manualToken)
-    await setupWorker(manualToken)
-    setShowManualMode(false)
-  }
-
   const pollStatus = async () => {
     const check = async () => {
       try {
@@ -282,37 +274,9 @@ function App() {
                         <span className="label-badge">GitHub Cloud Worker</span>
                         <p>{isTrialFinished ? "Trial over!" : "Optional:"} Setup your own private transfer engine to remove all limits.</p>
 
-                        {!showManualMode ? (
-                          <>
-                            <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={handleLinkGithub} disabled={isSettingUpWorker}>
-                              {isSettingUpWorker ? "Configuring..." : "Link My GitHub Account"}
-                            </button>
-                            <button type="button" className="btn-link" style={{ marginTop: '0.75rem', fontSize: '0.75rem' }} onClick={() => setShowManualMode(true)}>
-                              Pasting a manual token instead?
-                            </button>
-                          </>
-                        ) : (
-                          <div className="manual-pat-form" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <input
-                              placeholder="Paste GitHub Personal Access Token..."
-                              value={manualToken}
-                              onChange={e => setManualToken(e.target.value)}
-                              className="manual-input"
-                              autoFocus
-                            />
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={handleSaveManualToken} disabled={isSettingUpWorker}>
-                                {isSettingUpWorker ? 'Linking...' : 'Save Token'}
-                              </button>
-                              <button type="button" className="btn-secondary" onClick={() => setShowManualMode(false)}>
-                                Back
-                              </button>
-                            </div>
-                            <p style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>
-                              Required scopes: <code>repo</code>, <code>workflow</code>
-                            </p>
-                          </div>
-                        )}
+                        <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={handleLinkGithub} disabled={isSettingUpWorker}>
+                          {isSettingUpWorker ? "Configuring..." : "Link My GitHub Account"}
+                        </button>
                       </div>
                     )}
                   </>

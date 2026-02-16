@@ -10,7 +10,7 @@ exports.handler = async (event) => {
 
     const scope = 'repo,workflow';
 
-    const url = `https://github.com/login/oauth/authorize?client_id=${clientID}&redirect_uri=${encodeURIComponent(redirectURI)}&scope=${encodeURIComponent(scope)}&state=${Math.random().toString(36).substring(7)}`;
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientID}&scope=${encodeURIComponent(scope)}&state=${Math.random().toString(36).substring(7)}`;
 
     return {
         statusCode: 302,
