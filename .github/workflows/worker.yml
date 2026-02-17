@@ -29,12 +29,22 @@ jobs:
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v2
 
+      - name: Install Deno (for signature extraction)
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+
+      - name: Check Deno Version
+        run: |
+          export PATH="$HOME/.deno/bin:$PATH"
+          deno --version
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pymongo google-api-python-client google-auth-httplib2 google-auth-oauthlib requests
-          # Force install latest yt-dlp and verify
-          pip install --no-cache-dir --force-reinstall git+https://github.com/yt-dlp/yt-dlp.git@master
+          # Install standard yt-dlp release to match transfer.yml
+          pip install -U yt-dlp
 
       - name: Run Worker Script
         env:

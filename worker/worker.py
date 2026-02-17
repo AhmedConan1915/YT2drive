@@ -46,7 +46,7 @@ def get_drive_service(refresh_token, client_id, client_secret):
         client_secret=client_secret,
         scopes=['https://www.googleapis.com/auth/drive.file']
     )
-    return build('drive', 'v3', credentials=creds)
+    return build('drive', 'v3', credentials=creds, cache_discovery=False)
 
 def setup_cookies():
     cookie_content = os.environ.get("YOUTUBE_COOKIES")
@@ -98,6 +98,10 @@ def main():
             'no_warnings': False,
             'ignoreerrors': True, # Skip unavailable videos in playlist
             'restrictfilenames': True, # Avoid weird characters in filename
+            # Use specific extractor args to help with "n challenge" and bot detection
+            # Simplified to 'android' only as it is often more robust against challenges than 'web'
+            'extractor_args': {'youtube': {'player_client': ['android']}},
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
         
         if cookies_file:
