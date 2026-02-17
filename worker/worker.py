@@ -53,6 +53,7 @@ def get_drive_service(refresh_token, client_id, client_secret):
 
 def setup_cookies():
     cookie_content = os.environ.get("YOUTUBE_COOKIES")
+    logging.info(f"Checking YOUTUBE_COOKIES... Present: {bool(cookie_content)}, Length: {len(cookie_content) if cookie_content else 0}")
     if cookie_content:
         logging.info("YOUTUBE_COOKIES found in env, creating cookies.txt")
         with open("cookies.txt", "w") as f:
@@ -63,7 +64,7 @@ def setup_cookies():
 def get_video_items(youtube_url, cookies_file=None):
     # Retrieve metadata (flat playlist) to handle single video or playlist
     cmd = [
-        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings"
+        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings", "--js-runtimes", "node"
     ]
     if cookies_file:
         cmd.extend(["--cookies", cookies_file])
@@ -97,7 +98,7 @@ def get_video_items(youtube_url, cookies_file=None):
 
 def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file=None):
     # Get filename for this specific video
-    cmd_info = ["yt-dlp", "--get-filename", "-o", "%(title)s.%(ext)s"]
+    cmd_info = ["yt-dlp", "--get-filename", "-o", "%(title)s.%(ext)s", "--js-runtimes", "node"]
     if cookies_file:
         cmd_info.extend(["--cookies", cookies_file])
     cmd_info.append(video_url)
@@ -111,7 +112,7 @@ def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file
 
     logging.info(f"Streaming: {filename}")
 
-    cmd_download = ["yt-dlp", "-f", quality, "-o", "-"]
+    cmd_download = ["yt-dlp", "-f", quality, "-o", "-", "--js-runtimes", "node"]
     if cookies_file:
         cmd_download.extend(["--cookies", cookies_file])
     cmd_download.append(video_url)
