@@ -221,7 +221,8 @@ def main():
                     "cookies are no longer valid", 
                     "HTTP Error 403",
                     "Requested format is not available",
-                    "Unable to extract video data"
+                    "Unable to extract video data",
+                    "Failed to extract video info" # Caught when info is None
                 ])
                 
                 if is_auth_error and 'cookiefile' in ydl_opts:
