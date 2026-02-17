@@ -3,29 +3,41 @@ const { google } = require('googleapis');
 exports.handler = async (event) => {
     const protocol = event.headers['x-forwarded-proto'] || 'http';
     const host = event.headers.host;
-    // For the actual redirect_uri (registered in Google/GitHub), we use the fixed SITE_URL if available.
-    // But for the 'state' (our teleportation target), we MUST use the current host.
+    // For local testing (localhost), we MUST use the current host to ensure redirection comes back to this machine.
+    // In production, we can use SITE_URL if set, or fall back to the host.
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
     const currentOrigin = `${protocol}://${host}`;
-    const siteUrl = process.env.SITE_URL || currentOrigin;
+    const siteUrl = isLocal ? currentOrigin : (process.env.SITE_URL || currentOrigin);
+
+    // Use GOOGLE_CLIENT_ID/SECRET as per prompt, but fallback to GDRIVE_ if set
+    const clientId = process.env.GOOGLE_CLIENT_ID || process.env.GDRIVE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.GDRIVE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        console.error('CRITICAL: Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET.');
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'OAuth configuration missing on server.' })
+        };
+    }
 
     const oauth2Client = new google.auth.OAuth2(
-        process.env.GDRIVE_CLIENT_ID,
-        process.env.GDRIVE_CLIENT_SECRET,
+        clientId,
+        clientSecret,
         `${siteUrl}/.netlify/functions/callback`
     );
 
     const scopes = [
-        'openid',
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive.install'
+        'https://www.googleapis.com/auth/drive.file'
     ];
 
     const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
+        access_type: 'offline', // Crucial for receiving a refresh_token
         scope: scopes,
-        prompt: 'consent',
+        include_granted_scopes: true,
+        prompt: 'consent', // Force consent prompt to ensure we get a refresh_token every time
         state: currentOrigin
     });
 
