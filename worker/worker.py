@@ -189,7 +189,7 @@ def main():
             'restrictfilenames': True, # Avoid weird characters in filename
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web'],
+                    'player_client': ['ios', 'android', 'web'],
                     'player_skip': ['webpage', 'configs'], 
                     'include_live_dash': True
                 }
