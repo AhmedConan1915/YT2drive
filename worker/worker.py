@@ -1,17 +1,14 @@
 import os
 import sys
-import json
 import logging
-import subprocess
-import requests
+import json
+import glob
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-import io
+from googleapiclient.http import MediaFileUpload
+import yt_dlp
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -61,98 +58,17 @@ def setup_cookies():
         return "cookies.txt"
     return None
 
-def get_video_items(youtube_url, cookies_file=None):
-    # Retrieve metadata (flat playlist) to handle single video or playlist
-    cmd = [
-        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings", 
-        "--js-runtimes", "node",
-        "--extractor-args", "youtube:player_client=ios"
-    ]
-    if cookies_file:
-        cmd.extend(["--cookies", cookies_file])
-    
-    cmd.append(youtube_url)
-
-    try:
-        logging.info(f"Fetching metadata for: {youtube_url}")
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stdout, stderr = process.communicate()
-        
-        if process.returncode != 0:
-            logging.error(f"yt-dlp metadata fetch failed: {stderr}")
-            raise Exception(f"Failed to fetch metadata: {stderr}")
-
-        items = []
-        for line in stdout.strip().split('\n'):
-            if line:
-                try:
-                    data = json.loads(line)
-                    items.append({
-                        'id': data.get('id'),
-                        'title': data.get('title', 'Unknown Title'),
-                        'url': data.get('url') or data.get('webpage_url') or f"https://www.youtube.com/watch?v={data.get('id')}"
-                    })
-                except json.JSONDecodeError:
-                    pass
-        return items
-    except Exception as e:
-        raise e
-
-def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file=None):
-    # Get filename for this specific video
-    cmd_info = ["yt-dlp", "--get-filename", "-o", "%(title)s.%(ext)s", "--js-runtimes", "node"]
-    if cookies_file:
-        cmd_info.extend(["--cookies", cookies_file])
-    cmd_info.append(video_url)
-    
-    try:
-        filename = subprocess.check_output(cmd_info).decode('utf-8').strip()
-    except subprocess.CalledProcessError as e:
-        # Fallback filename if yt-dlp fails to get name (e.g. auth issue caught here)
-        logging.warning(f"Could not determine filename, using default: {e}")
-        filename = f"video_{video_url.split('=')[-1]}.mp4"
-
-    logging.info(f"Streaming: {filename}")
-
-    cmd_download = ["yt-dlp", "-f", quality, "-o", "-", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=ios"]
-    if cookies_file:
-        cmd_download.extend(["--cookies", cookies_file])
-    cmd_download.append(video_url)
-    
-    process = subprocess.Popen(
-        cmd_download,
-        stdout=subprocess.PIPE,
-        stderr=sys.stderr,
-        bufsize=10**7
-    )
-    
-    file_metadata = {'name': filename}
-    media = MediaIoBaseUpload(process.stdout, mimetype='video/mp4', resumable=False)
-    
-    file = drive_service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields='id'
-    ).execute()
-    
-    process.wait()
-    
-    if process.returncode != 0:
-        raise Exception("yt-dlp download/stream process failed")
-        
-    return file.get('id')
-
 def main():
     job_id = os.environ.get("JOB_ID")
     logging.info(f"Starting worker for Job ID: {job_id}")
-    try:
-        version = subprocess.check_output(["yt-dlp", "--version"]).decode("utf-8").strip()
-        logging.info(f"yt-dlp version: {version}")
-        node_version = subprocess.check_output(["node", "--version"]).decode("utf-8").strip()
-        logging.info(f"node version: {node_version}")
-    except Exception as e:
-        logging.warning(f"Metadata check failed: {e}")
     
+    # Log versions
+    try:
+        import yt_dlp.version
+        logging.info(f"yt-dlp version: {yt_dlp.version.__version__}")
+    except:
+        logging.warning("Could not check yt-dlp version")
+
     db = get_db()
     job = get_job(db, job_id)
     if not job:
@@ -168,42 +84,121 @@ def main():
              raise Exception("Missing Google Credentials in Env")
 
         drive_service = get_drive_service(job['user_refresh_token'], CLIENT_ID, CLIENT_SECRET)
-        
         cookies_file = setup_cookies()
         
-        # 1. Get items (handles playlist vs single video)
-        video_items = get_video_items(job['youtube_url'], cookies_file)
+        url = job['youtube_url']
+        logging.info(f"Processing URL: {url}")
+
+        # Configure yt-dlp options
+        ydl_opts = {
+            'format': 'bestvideo+bestaudio/best',
+            'merge_output_format': 'mp4',
+            'outtmpl': '%(title)s.%(ext)s',
+            'quiet': False,
+            'no_warnings': False,
+            'ignoreerrors': True, # Skip unavailable videos in playlist
+            'restrictfilenames': True, # Avoid weird characters in filename
+        }
         
-        if not video_items:
-            raise Exception("No videos found. Check URL or Privacy settings.")
-            
-        success_count = 0
-        errors = []
+        if cookies_file:
+            ydl_opts['cookiefile'] = cookies_file
 
-        logging.info(f"Found {len(video_items)} videos to process.")
-
-        for item in video_items:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # 1. Extract Info first to get list of videos (or single video)
             try:
-                logging.info(f"Processing: {item['title']}")
-                stream_video_to_drive(item['url'], drive_service, job.get('quality', 'best'), cookies_file)
-                success_count += 1
+                info = ydl.extract_info(url, download=False)
             except Exception as e:
-                logging.error(f"Failed to process {item['title']}: {e}")
-                errors.append(f"{item['title']}: {str(e)}")
-        
-        if success_count == 0 and errors:
-            raise Exception(f"All downloads failed. Errors: {'; '.join(errors)}")
-        
-        status = "completed" if not errors else "completed_with_errors"
-        update_job_status(db, job['_id'], status)
-        
-        if cookies_file and os.path.exists(cookies_file):
-            os.remove(cookies_file)
+                raise Exception(f"Failed to fetch metadata: {e}")
+
+            if 'entries' in info:
+                # Playlist
+                video_items = info['entries']
+            else:
+                # Single video
+                video_items = [info]
+
+            video_items = [v for v in video_items if v] # Filter None entries
+            
+            if not video_items:
+                 raise Exception("No videos found. Check URL or Privacy settings.")
+            
+            logging.info(f"Found {len(video_items)} videos to process.")
+            
+            success_count = 0
+            errors = []
+
+            for item in video_items:
+                video_id = item.get('id')
+                title = item.get('title', 'Unknown')
+                video_url = item.get('webpage_url') or item.get('url')
+                
+                logging.info(f"Processing: {title} ({video_id})")
+                
+                try:
+                    # Download specific video
+                    err_code = ydl.download([video_url])
+                    if err_code != 0:
+                         raise Exception(f"yt-dlp download failed with code {err_code}")
+                    
+                    # Find the downloaded file
+                    # Since we use restrictfilenames, the filename might be slightly different than title
+                    # But we can look for the most recently created mp4 file or use prepare_filename
+                    
+                    # Better approach: 
+                    # yt-dlp prepare_filename might not match exactly after merge
+                    # So we search for *.mp4 files in current dir (assuming we clean up)
+                    
+                    # Actually, since we process sequentially, we can just look for *.mp4
+                    files = glob.glob("*.mp4")
+                    if not files:
+                        # Maybe it defaulted to mkv or webm if merge failed?
+                         files = glob.glob("*.mkv") + glob.glob("*.webm")
+                    
+                    if not files:
+                        raise Exception("Downloaded file not found")
+
+                    # Pick the file (should be only one if we clean up)
+                    filepath = files[0] # Just take the first one found
+                    actual_filename = os.path.basename(filepath)
+                    logging.info(f"Uploading file: {actual_filename}")
+                    
+                    # Upload to Drive
+                    file_metadata = {'name': actual_filename} # Could use 'title' from metadata if preferred
+                    media = MediaFileUpload(filepath, mimetype='video/mp4', resumable=True)
+                    
+                    drive_file = drive_service.files().create(
+                        body=file_metadata,
+                        media_body=media,
+                        fields='id'
+                    ).execute()
+                    
+                    logging.info(f"Uploaded to Drive ID: {drive_file.get('id')}")
+                    
+                    # Cleanup
+                    os.remove(filepath)
+                    success_count += 1
+
+                except Exception as e:
+                    logging.error(f"Failed to process {title}: {e}")
+                    errors.append(f"{title}: {str(e)}")
+                    # Clean up any potential leftovers
+                    for f in glob.glob("*.mp4") + glob.glob("*.mkv") + glob.glob("*.webm"):
+                        try: os.remove(f)
+                        except: pass
+
+            if success_count == 0 and errors:
+                raise Exception(f"All downloads failed. Errors: {'; '.join(errors)}")
+
+            status = "completed" if not errors else "completed_with_errors"
+            update_job_status(db, job['_id'], status)
 
     except Exception as e:
         logging.error(f"Fatal error: {e}")
         update_job_status(db, job['_id'], "failed", error=e)
         sys.exit(1)
+    finally:
+        if 'cookies_file' in locals() and cookies_file and os.path.exists(cookies_file):
+            os.remove(cookies_file)
 
 if __name__ == "__main__":
     main()
