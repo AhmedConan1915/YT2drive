@@ -25,7 +25,7 @@ exports.handler = async (event) => {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const { userId, youtube_url, quality } = JSON.parse(event.body);
+    const { userId, youtube_url, quality, folderName, customFilename } = JSON.parse(event.body);
 
     if (!userId || !youtube_url) {
         return { statusCode: 400, body: JSON.stringify({ error: 'Missing userId or youtube_url' }) };
@@ -62,6 +62,8 @@ exports.handler = async (event) => {
             userId: new ObjectId(userId),
             youtube_url,
             quality: quality || 'best',
+            folder_name: folderName, // NEW
+            custom_filename: customFilename, // NEW
             user_refresh_token: user.refresh_token, // Encrypt this in production!
             status: 'pending',
             created_at: new Date()

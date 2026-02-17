@@ -6,6 +6,8 @@ function App() {
   const [user, setUser] = useState(null)
   const [url, setUrl] = useState('')
   const [quality, setQuality] = useState('best')
+  const [folderName, setFolderName] = useState('')
+  const [customFilename, setCustomFilename] = useState('')
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [jobId, setJobId] = useState(null)
@@ -53,7 +55,9 @@ function App() {
       const response = await axios.post('/.netlify/functions/submit_job', {
         userId: user.userId,
         youtube_url: url,
-        quality
+        quality,
+        folderName,
+        customFilename
       })
 
       if (response.data.jobId) {
@@ -112,6 +116,26 @@ function App() {
                   <option value="worst">Lowest (Data Saver)</option>
                   <option value="bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best">MP4 (Best Compatibility)</option>
                 </select>
+              </div>
+
+              <div className="input-group">
+                <label>Folder Name (Optional)</label>
+                <input
+                  type="text"
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
+                  placeholder="e.g. My Music"
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Custom Filename (Optional)</label>
+                <input
+                  type="text"
+                  value={customFilename}
+                  onChange={(e) => setCustomFilename(e.target.value)}
+                  placeholder="e.g. Awesome Video"
+                />
               </div>
 
               <button type="submit" className="btn-primary" disabled={isSubmitting}>

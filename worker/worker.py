@@ -111,11 +111,45 @@ def process_video_download(ydl_opts, url, drive_service, db, job):
 
                 # Pick the file (should be only one if we clean up)
                 filepath = files[0] 
-                actual_filename = os.path.basename(filepath)
-                logging.info(f"Uploading file: {actual_filename}")
+                original_extension = os.path.splitext(filepath)[1]
                 
+                # Determine final filename
+                if job.get('custom_filename'):
+                    final_filename = job['custom_filename']
+                    if not os.path.splitext(final_filename)[1]:
+                        final_filename += original_extension
+                else:
+                    final_filename = os.path.basename(filepath)
+                
+                logging.info(f"Uploading file: {final_filename}")
+                
+                # Handle Folder Logic
+                parent_id = None
+                if job.get('folder_name'):
+                    folder_name = job['folder_name']
+                    # Search for folder
+                    query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}' and trashed=false"
+                    results = drive_service.files().list(q=query, fields="files(id)").execute()
+                    items = results.get('files', [])
+                    
+                    if items:
+                        parent_id = items[0]['id']
+                        logging.info(f"Found existing folder '{folder_name}' (ID: {parent_id})")
+                    else:
+                        # Create folder
+                        folder_metadata = {
+                            'name': folder_name,
+                            'mimeType': 'application/vnd.google-apps.folder'
+                        }
+                        folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
+                        parent_id = folder.get('id')
+                        logging.info(f"Created new folder '{folder_name}' (ID: {parent_id})")
+
                 # Upload to Drive
-                file_metadata = {'name': actual_filename} 
+                file_metadata = {'name': final_filename}
+                if parent_id:
+                    file_metadata['parents'] = [parent_id]
+                    
                 media = MediaFileUpload(filepath, mimetype='video/mp4', resumable=True)
                 
                 drive_file = drive_service.files().create(
