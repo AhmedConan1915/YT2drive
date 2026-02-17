@@ -2,5 +2,5 @@ pymongo
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
-yt-dlp
+yt-dlp @ git+https://github.com/yt-dlp/yt-dlp.git@master
 requests
