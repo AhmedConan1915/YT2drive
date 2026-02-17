@@ -58,6 +58,95 @@ def setup_cookies():
         return "cookies.txt"
     return None
 
+
+def process_video_download(ydl_opts, url, drive_service, db, job):
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        # 1. Extract Info first to get list of videos (or single video)
+        try:
+            info = ydl.extract_info(url, download=False)
+        except Exception as e:
+            # Re-raise to be caught by retry loop
+            raise e
+        
+        if not info:
+             raise Exception("Failed to extract video info (None returned). Check logs for yt-dlp errors.")
+
+        if 'entries' in info:
+            # Playlist
+            video_items = info['entries']
+        else:
+            # Single video
+            video_items = [info]
+
+        video_items = [v for v in video_items if v] # Filter None entries
+        
+        if not video_items:
+             raise Exception("No videos found. Check URL or Privacy settings.")
+        
+        logging.info(f"Found {len(video_items)} videos to process.")
+        
+        success_count = 0
+        errors = []
+
+        for item in video_items:
+            video_id = item.get('id')
+            title = item.get('title', 'Unknown')
+            video_url = item.get('webpage_url') or item.get('url')
+            
+            logging.info(f"Processing: {title} ({video_id})")
+            
+            try:
+                # Download specific video
+                err_code = ydl.download([video_url])
+                if err_code != 0:
+                     raise Exception(f"yt-dlp download failed with code {err_code}")
+                
+                # Find the downloaded file
+                files = glob.glob("*.mp4")
+                if not files:
+                     files = glob.glob("*.mkv") + glob.glob("*.webm")
+                
+                if not files:
+                    raise Exception("Downloaded file not found")
+
+                # Pick the file (should be only one if we clean up)
+                filepath = files[0] 
+                actual_filename = os.path.basename(filepath)
+                logging.info(f"Uploading file: {actual_filename}")
+                
+                # Upload to Drive
+                file_metadata = {'name': actual_filename} 
+                media = MediaFileUpload(filepath, mimetype='video/mp4', resumable=True)
+                
+                drive_file = drive_service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
+                
+                logging.info(f"Uploaded to Drive ID: {drive_file.get('id')}")
+                
+                # Cleanup
+                os.remove(filepath)
+                success_count += 1
+
+            except Exception as e:
+                logging.error(f"Failed to process {title}: {e}")
+                errors.append(f"{title}: {str(e)}")
+                # Clean up any potential leftovers
+                for f in glob.glob("*.mp4") + glob.glob("*.mkv") + glob.glob("*.webm"):
+                    try: os.remove(f)
+                    except: pass
+                # Re-raise authentication errors to trigger retry in main
+                if "Sign in to confirm" in str(e) or "cookies are no longer valid" in str(e):
+                    raise e
+
+        if success_count == 0 and errors:
+            raise Exception(f"All downloads failed. Errors: {'; '.join(errors)}")
+
+        status = "completed" if not errors else "completed_with_errors"
+        update_job_status(db, job['_id'], status)
+
 def main():
     job_id = os.environ.get("JOB_ID")
     logging.info(f"Starting worker for Job ID: {job_id}")
@@ -98,106 +187,43 @@ def main():
             'no_warnings': False,
             'ignoreerrors': True, # Skip unavailable videos in playlist
             'restrictfilenames': True, # Avoid weird characters in filename
-            # Use specific extractor args to help with "n challenge" and bot detection
-            # Use 'android' for video/audio streams and 'web' for cookies/auth
-            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                    'player_skip': ['webpage', 'configs'], 
+                    'include_live_dash': True
+                }
+            },
+            'compat_opts': {'no-live-chat', 'no-youtube-prefer-utc-upload-date', 'no-youtube-channel-redirect'}, 
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            # Allow remote components for JS challenge solving (e.g. for "n" parameter)
+            # Corresponds to --remote-components ejs:github
+            'remote_components': {'ejs': 'github'},
         }
         
         if cookies_file:
             ydl_opts['cookiefile'] = cookies_file
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # 1. Extract Info first to get list of videos (or single video)
+            
+        # Retry loop for handling expired cookies
+        max_retries = 1
+        current_attempt = 0
+        
+        while current_attempt <= max_retries:
             try:
-                info = ydl.extract_info(url, download=False)
+                process_video_download(ydl_opts, url, drive_service, db, job)
+                break # Success, exit loop
             except Exception as e:
-                raise Exception(f"Failed to fetch metadata: {e}")
-            
-            if not info:
-                 raise Exception("Failed to extract video info (None returned). Check logs for yt-dlp errors.")
-
-            if 'entries' in info:
-                # Playlist
-                video_items = info['entries']
-            else:
-                # Single video
-                video_items = [info]
-
-            video_items = [v for v in video_items if v] # Filter None entries
-            
-            if not video_items:
-                 raise Exception("No videos found. Check URL or Privacy settings.")
-            
-            logging.info(f"Found {len(video_items)} videos to process.")
-            
-            success_count = 0
-            errors = []
-
-            for item in video_items:
-                video_id = item.get('id')
-                title = item.get('title', 'Unknown')
-                video_url = item.get('webpage_url') or item.get('url')
+                error_msg = str(e)
+                is_auth_error = "Sign in to confirm" in error_msg or "cookies are no longer valid" in error_msg or "HTTP Error 403" in error_msg
                 
-                logging.info(f"Processing: {title} ({video_id})")
-                
-                try:
-                    # Download specific video
-                    err_code = ydl.download([video_url])
-                    if err_code != 0:
-                         raise Exception(f"yt-dlp download failed with code {err_code}")
-                    
-                    # Find the downloaded file
-                    # Since we use restrictfilenames, the filename might be slightly different than title
-                    # But we can look for the most recently created mp4 file or use prepare_filename
-                    
-                    # Better approach: 
-                    # yt-dlp prepare_filename might not match exactly after merge
-                    # So we search for *.mp4 files in current dir (assuming we clean up)
-                    
-                    # Actually, since we process sequentially, we can just look for *.mp4
-                    files = glob.glob("*.mp4")
-                    if not files:
-                        # Maybe it defaulted to mkv or webm if merge failed?
-                         files = glob.glob("*.mkv") + glob.glob("*.webm")
-                    
-                    if not files:
-                        raise Exception("Downloaded file not found")
-
-                    # Pick the file (should be only one if we clean up)
-                    filepath = files[0] # Just take the first one found
-                    actual_filename = os.path.basename(filepath)
-                    logging.info(f"Uploading file: {actual_filename}")
-                    
-                    # Upload to Drive
-                    file_metadata = {'name': actual_filename} # Could use 'title' from metadata if preferred
-                    media = MediaFileUpload(filepath, mimetype='video/mp4', resumable=True)
-                    
-                    drive_file = drive_service.files().create(
-                        body=file_metadata,
-                        media_body=media,
-                        fields='id'
-                    ).execute()
-                    
-                    logging.info(f"Uploaded to Drive ID: {drive_file.get('id')}")
-                    
-                    # Cleanup
-                    os.remove(filepath)
-                    success_count += 1
-
-                except Exception as e:
-                    logging.error(f"Failed to process {title}: {e}")
-                    errors.append(f"{title}: {str(e)}")
-                    # Clean up any potential leftovers
-                    for f in glob.glob("*.mp4") + glob.glob("*.mkv") + glob.glob("*.webm"):
-                        try: os.remove(f)
-                        except: pass
-
-            if success_count == 0 and errors:
-                raise Exception(f"All downloads failed. Errors: {'; '.join(errors)}")
-
-            status = "completed" if not errors else "completed_with_errors"
-            update_job_status(db, job['_id'], status)
+                if is_auth_error and 'cookiefile' in ydl_opts:
+                    logging.warning(f"Authentication failed with cookies: {e}")
+                    logging.info("Retrying without cookies...")
+                    del ydl_opts['cookiefile']
+                    current_attempt += 1
+                    continue
+                else:
+                    raise e # Not an auth error or no more retries
 
     except Exception as e:
         logging.error(f"Fatal error: {e}")
