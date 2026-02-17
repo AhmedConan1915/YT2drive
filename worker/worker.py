@@ -198,7 +198,7 @@ def main():
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             # Allow remote components for JS challenge solving (e.g. for "n" parameter)
             # Corresponds to --remote-components ejs:github
-            'remote_components': {'ejs': 'github'},
+            'remote_components': ['ejs:github'],
         }
         
         if cookies_file:
@@ -214,10 +214,18 @@ def main():
                 break # Success, exit loop
             except Exception as e:
                 error_msg = str(e)
-                is_auth_error = "Sign in to confirm" in error_msg or "cookies are no longer valid" in error_msg or "HTTP Error 403" in error_msg
+                # Check for various auth-related errors
+                # "Requested format is not available" often happens when cookies are invalid but yt-dlp sees them and restricts generic formats
+                is_auth_error = any(msg in error_msg for msg in [
+                    "Sign in to confirm", 
+                    "cookies are no longer valid", 
+                    "HTTP Error 403",
+                    "Requested format is not available",
+                    "Unable to extract video data"
+                ])
                 
                 if is_auth_error and 'cookiefile' in ydl_opts:
-                    logging.warning(f"Authentication failed with cookies: {e}")
+                    logging.warning(f"Possible authentication failure with cookies: {e}")
                     logging.info("Retrying without cookies...")
                     del ydl_opts['cookiefile']
                     current_attempt += 1
