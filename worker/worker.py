@@ -112,7 +112,7 @@ def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file
 
     logging.info(f"Streaming: {filename}")
 
-    cmd_download = ["yt-dlp", "-f", quality, "-o", "-", "--js-runtimes", "node"]
+    cmd_download = ["yt-dlp", "-f", quality, "-o", "-", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=android,web"]
     if cookies_file:
         cmd_download.extend(["--cookies", cookies_file])
     cmd_download.append(video_url)
@@ -125,7 +125,7 @@ def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file
     )
     
     file_metadata = {'name': filename}
-    media = MediaIoBaseUpload(process.stdout, mimetype='video/mp4', resumable=True)
+    media = MediaIoBaseUpload(process.stdout, mimetype='video/mp4', resumable=False)
     
     file = drive_service.files().create(
         body=file_metadata,
