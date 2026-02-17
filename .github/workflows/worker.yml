@@ -21,8 +21,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
       - name: Install dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
           pip install pymongo google-api-python-client google-auth-httplib2 google-auth-oauthlib yt-dlp requests
 
@@ -31,5 +37,8 @@ jobs:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || secrets.GDRIVE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.GDRIVE_CLIENT_SECRET }}
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+          JOB_ID: ${{ github.event.inputs.jobId || github.event.client_payload.jobId }}
+        run: python worker/worker.py
           JOB_ID: ${{ github.event.inputs.jobId || github.event.client_payload.jobId }}
         run: python worker/worker.py

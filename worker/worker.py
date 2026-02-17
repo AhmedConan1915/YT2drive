@@ -21,14 +21,12 @@ def get_db():
     if not start_uri:
         logging.error("MONGO_URI not set")
         sys.exit(1)
-    # Ensure compatible connection string if needed, mostly ready for Atlas
     client = MongoClient(start_uri)
     return client.utube2drive
 
 def get_job(db, job_id):
     try:
         if not job_id:
-             # If no specific job, pick the oldest pending one
             return db.jobs.find_one({"status": "pending"}, sort=[("created_at", 1)])
         return db.jobs.find_one({"_id": ObjectId(job_id)})
     except Exception as e:
@@ -44,7 +42,7 @@ def update_job_status(db, job_id, status, error=None):
 
 def get_drive_service(refresh_token, client_id, client_secret):
     creds = Credentials(
-        None, # No access token initially
+        None,
         refresh_token=refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=client_id,
@@ -53,48 +51,91 @@ def get_drive_service(refresh_token, client_id, client_secret):
     )
     return build('drive', 'v3', credentials=creds)
 
-def stream_video_to_drive(youtube_url, drive_service, quality='best'):
-    # Get video info first to get clean filename
-    cmd_info = [
-        "yt-dlp", "--get-filename", "-o", "%(title)s.%(ext)s", youtube_url
-    ]
-    filename = subprocess.check_output(cmd_info).decode('utf-8').strip()
-    logging.info(f"Target filename: {filename}")
+def setup_cookies():
+    cookie_content = os.environ.get("YOUTUBE_COOKIES")
+    if cookie_content:
+        logging.info("YOUTUBE_COOKIES found in env, creating cookies.txt")
+        with open("cookies.txt", "w") as f:
+            f.write(cookie_content)
+        return "cookies.txt"
+    return None
 
-    # Create a pipe
-    # We will use yt-dlp to output to stdout, and read it into a Custom Stream class
-    # that implements read() for the Google Drive uploader
-    
-    # Start yt-dlp process
-    cmd_download = [
-        "yt-dlp", "-f", quality, "-o", "-", youtube_url
+def get_video_items(youtube_url, cookies_file=None):
+    # Retrieve metadata (flat playlist) to handle single video or playlist
+    cmd = [
+        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings"
     ]
+    if cookies_file:
+        cmd.extend(["--cookies", cookies_file])
+    
+    cmd.append(youtube_url)
+
+    try:
+        logging.info(f"Fetching metadata for: {youtube_url}")
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate()
+        
+        if process.returncode != 0:
+            logging.error(f"yt-dlp metadata fetch failed: {stderr}")
+            raise Exception(f"Failed to fetch metadata: {stderr}")
+
+        items = []
+        for line in stdout.strip().split('\n'):
+            if line:
+                try:
+                    data = json.loads(line)
+                    items.append({
+                        'id': data.get('id'),
+                        'title': data.get('title', 'Unknown Title'),
+                        'url': data.get('url') or data.get('webpage_url') or f"https://www.youtube.com/watch?v={data.get('id')}"
+                    })
+                except json.JSONDecodeError:
+                    pass
+        return items
+    except Exception as e:
+        raise e
+
+def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file=None):
+    # Get filename for this specific video
+    cmd_info = ["yt-dlp", "--get-filename", "-o", "%(title)s.%(ext)s"]
+    if cookies_file:
+        cmd_info.extend(["--cookies", cookies_file])
+    cmd_info.append(video_url)
+    
+    try:
+        filename = subprocess.check_output(cmd_info).decode('utf-8').strip()
+    except subprocess.CalledProcessError as e:
+        # Fallback filename if yt-dlp fails to get name (e.g. auth issue caught here)
+        logging.warning(f"Could not determine filename, using default: {e}")
+        filename = f"video_{video_url.split('=')[-1]}.mp4"
+
+    logging.info(f"Streaming: {filename}")
+
+    cmd_download = ["yt-dlp", "-f", quality, "-o", "-"]
+    if cookies_file:
+        cmd_download.extend(["--cookies", cookies_file])
+    cmd_download.append(video_url)
     
     process = subprocess.Popen(
         cmd_download,
         stdout=subprocess.PIPE,
-        stderr=sys.stderr, # Send yt-dlp logs to stderr so we see them in Action logs
-        bufsize=10**7 # 10MB buffer
+        stderr=sys.stderr,
+        bufsize=10**7
     )
     
     file_metadata = {'name': filename}
-    
-    # MediaIoBaseUpload requires a readable stream. 
-    # process.stdout is a readable stream.
     media = MediaIoBaseUpload(process.stdout, mimetype='video/mp4', resumable=True)
     
-    # Execute upload
     file = drive_service.files().create(
         body=file_metadata,
         media_body=media,
         fields='id'
     ).execute()
     
-    # Ensure process finishes
     process.wait()
     
     if process.returncode != 0:
-        raise Exception("yt-dlp failed to download video")
+        raise Exception("yt-dlp download/stream process failed")
         
     return file.get('id')
 
@@ -103,28 +144,51 @@ def main():
     logging.info(f"Starting worker for Job ID: {job_id}")
     
     db = get_db()
-    
     job = get_job(db, job_id)
     if not job:
         logging.info("No pending jobs found.")
         return
 
-    logging.info(f"Processing job {job['_id']} for {job['youtube_url']}")
     update_job_status(db, job['_id'], "processing")
-
+    
     try:
         CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
         CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-        
         if not CLIENT_ID or not CLIENT_SECRET:
              raise Exception("Missing Google Credentials in Env")
 
         drive_service = get_drive_service(job['user_refresh_token'], CLIENT_ID, CLIENT_SECRET)
         
-        file_id = stream_video_to_drive(job['youtube_url'], drive_service, job.get('quality', 'best'))
+        cookies_file = setup_cookies()
         
-        logging.info(f"Upload complete. File ID: {file_id}")
-        update_job_status(db, job['_id'], "completed")
+        # 1. Get items (handles playlist vs single video)
+        video_items = get_video_items(job['youtube_url'], cookies_file)
+        
+        if not video_items:
+            raise Exception("No videos found. Check URL or Privacy settings.")
+            
+        success_count = 0
+        errors = []
+
+        logging.info(f"Found {len(video_items)} videos to process.")
+
+        for item in video_items:
+            try:
+                logging.info(f"Processing: {item['title']}")
+                stream_video_to_drive(item['url'], drive_service, job.get('quality', 'best'), cookies_file)
+                success_count += 1
+            except Exception as e:
+                logging.error(f"Failed to process {item['title']}: {e}")
+                errors.append(f"{item['title']}: {str(e)}")
+        
+        if success_count == 0 and errors:
+            raise Exception(f"All downloads failed. Errors: {'; '.join(errors)}")
+        
+        status = "completed" if not errors else "completed_with_errors"
+        update_job_status(db, job['_id'], status)
+        
+        if cookies_file and os.path.exists(cookies_file):
+            os.remove(cookies_file)
 
     except Exception as e:
         logging.error(f"Fatal error: {e}")
