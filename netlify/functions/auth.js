@@ -1,3 +1,13 @@
+const path = require('path');
+const fs = require('fs');
+
+if (!process.env.GOOGLE_CLIENT_ID && !process.env.GDRIVE_CLIENT_ID) {
+    const rootEnvPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(rootEnvPath)) {
+        require('dotenv').config({ path: rootEnvPath });
+    }
+}
+
 const { google } = require('googleapis');
 
 exports.handler = async (event) => {

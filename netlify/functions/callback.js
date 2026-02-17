@@ -1,14 +1,32 @@
+const path = require('path');
+const fs = require('fs');
+
+// 1. Try to verify if MONGO_URI is already loaded by Netlify CLI
+if (!process.env.MONGO_URI) {
+    // 2. If not, manually load from the project root using process.cwd()
+    const rootEnvPath = path.resolve(process.cwd(), '.env');
+    console.log(`[Debug] Loading .env from: ${rootEnvPath}`);
+
+    if (fs.existsSync(rootEnvPath)) {
+        require('dotenv').config({ path: rootEnvPath });
+    } else {
+        console.warn("[Warning] .env file not found at project root!");
+    }
+}
+
 const { google } = require('googleapis');
 const { MongoClient } = require('mongodb');
+
+// DEBUG LOGGING
+console.log("Loading callback.js...");
+console.log("MONGO_URI is set:", !!process.env.MONGO_URI);
+console.log("GOOGLE_CLIENT_ID is set:", !!(process.env.GOOGLE_CLIENT_ID || process.env.GDRIVE_CLIENT_ID));
 
 let cachedDb = null;
 
 async function connectToDatabase(uri) {
     if (cachedDb) return cachedDb;
-    const client = await MongoClient.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    });
+    const client = await MongoClient.connect(uri);
     cachedDb = client.db('utube2drive');
     return cachedDb;
 }
@@ -28,8 +46,12 @@ exports.handler = async (event) => {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.GDRIVE_CLIENT_SECRET;
     const mongoUri = process.env.MONGO_URI;
 
+    if (!clientId) console.error("Missing GOOGLE_CLIENT_ID");
+    if (!clientSecret) console.error("Missing GOOGLE_CLIENT_SECRET");
+    if (!mongoUri) console.error("Missing MONGO_URI");
+
     if (!clientId || !clientSecret || !mongoUri) {
-        return { statusCode: 500, body: 'Server misconfigured (secrets missing)' };
+        return { statusCode: 500, body: 'Server misconfigured (secrets missing). Check terminal logs for details.' };
     }
 
     try {
@@ -71,7 +93,11 @@ exports.handler = async (event) => {
             { returnDocument: 'after', upsert: true }
         );
 
-        const userId = result.value ? result.value._id : result.lastErrorObject.upserted;
+        // MongoDB driver v4+ returns { value: ... } or just the doc depending on version/options.
+        // If result is the doc itself (v5+ default with includeResultMetadata: false), use it.
+        // Safest access for v4/v5 compatibility:
+        const userDoc = result.value || result;
+        const userId = userDoc._id;
 
         // Redirect back to frontend
         let redirectTarget = state && state.startsWith('http') ? state : siteUrl;

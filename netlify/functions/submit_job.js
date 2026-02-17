@@ -1,3 +1,13 @@
+const path = require('path');
+const fs = require('fs');
+
+if (!process.env.MONGO_URI) {
+    const rootEnvPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(rootEnvPath)) {
+        require('dotenv').config({ path: rootEnvPath });
+    }
+}
+
 const { MongoClient, ObjectId } = require('mongodb');
 const axios = require('axios');
 
@@ -5,10 +15,7 @@ let cachedDb = null;
 
 async function connectToDatabase(uri) {
     if (cachedDb) return cachedDb;
-    const client = await MongoClient.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    });
+    const client = await MongoClient.connect(uri);
     cachedDb = client.db('utube2drive');
     return cachedDb;
 }
@@ -26,11 +33,17 @@ exports.handler = async (event) => {
 
     const mongoUri = process.env.MONGO_URI;
     const githubPat = process.env.GITHUB_PAT;
-    const githubOwner = process.env.GITHUB_OWNER;
-    const githubRepo = process.env.GITHUB_REPO;
+    // .env uses REPO_OWNER/NAME, so we support both
+    const githubOwner = process.env.GITHUB_OWNER || process.env.REPO_OWNER;
+    const githubRepo = process.env.GITHUB_REPO || process.env.REPO_NAME;
+
+    if (!mongoUri) console.error("Missing MONGO_URI");
+    if (!githubPat) console.error("Missing GITHUB_PAT");
+    if (!githubOwner) console.error("Missing GITHUB_OWNER (or REPO_OWNER)");
+    if (!githubRepo) console.error("Missing GITHUB_REPO (or REPO_NAME)");
 
     if (!mongoUri || !githubPat || !githubOwner || !githubRepo) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfigured' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfigured (secrets missing). Check terminal logs.' }) };
     }
 
     try {
@@ -62,7 +75,7 @@ exports.handler = async (event) => {
         const workflowUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/actions/workflows/worker.yml/dispatches`;
 
         await axios.post(workflowUrl, {
-            ref: 'main', // or master, depending on your default branch
+            ref: 'master',
             inputs: {
                 jobId: jobId.toString()
             }
