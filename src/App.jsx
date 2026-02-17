@@ -75,28 +75,64 @@ function App() {
 
   return (
     <div className="App">
-      <div className="container">
-        <header>
-          <h1>utube2drive</h1>
-          <p className="subtitle">Transfer YouTube videos directly to your Google Drive</p>
-        </header>
-
-        {!user ? (
-          <div className="auth-section">
-            <button className="btn-primary" onClick={handleLogin}>
-              Connect Google Drive
-            </button>
-            <p className="subtitle" style={{ marginTop: '1rem' }}>
-              We need access to upload files to your Drive.
+      {!user ? (
+        // LANDING PAGE FOR GUESTS
+        <div className="landing-page">
+          <section className="hero-section">
+            <h1>YT2Drive</h1>
+            <p className="subtitle">
+              Professional YouTube to Drive Transfer. <br />
+              Save videos directly to your cloud storage in seconds.
             </p>
-          </div>
-        ) : (
-          <div className="app-content">
-            <div className="user-profile-mini">
-              <span>Connected as: <strong>{user.email}</strong></span>
-              <button className="btn-logout" onClick={handleLogout}>Logout</button>
+
+            <button className="btn-primary" onClick={handleLogin}>
+              Connect with Google Drive
+            </button>
+            <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Authentication required to access your Drive safely.
+            </p>
+          </section>
+
+          <section className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon">🚀</div>
+              <div className="feature-title">Fast Transfer</div>
+              <div className="feature-desc">
+                Direct server-to-server transfer. No need to download files to your device first.
+              </div>
             </div>
 
+            <div className="feature-card">
+              <div className="feature-icon">📂</div>
+              <div className="feature-title">Custom Organization</div>
+              <div className="feature-desc">
+                Organize downloads into custom folders and rename files automatically.
+              </div>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">🔒</div>
+              <div className="feature-title">Secure & Private</div>
+              <div className="feature-desc">
+                We use secure OAuth 2.0. Your data never leaves the direct connection to Google.
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : (
+        // DASHBOARD FOR LOGGED-IN USERS
+        <div className="container">
+          <header>
+            <h1>Dashboard</h1>
+            <p className="subtitle">Manage your downloads</p>
+          </header>
+
+          <div className="user-profile-mini">
+            <span>Signed in as <strong>{user.email}</strong></span>
+            <button className="btn-logout" onClick={handleLogout}>Logout</button>
+          </div>
+
+          <div className="glass-card">
             <form onSubmit={handleSubmit} className="transfer-form">
               <div className="input-group">
                 <label>YouTube URL</label>
@@ -104,7 +140,7 @@ function App() {
                   type="text"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholder="Paste YouTube link here..."
                   required
                 />
               </div>
@@ -113,18 +149,18 @@ function App() {
                 <label>Quality</label>
                 <select value={quality} onChange={(e) => setQuality(e.target.value)}>
                   <option value="best">Best Available</option>
-                  <option value="worst">Lowest (Data Saver)</option>
                   <option value="bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best">MP4 (Best Compatibility)</option>
+                  <option value="worst">Data Saver (Low Quality)</option>
                 </select>
               </div>
 
               <div className="input-group">
-                <label>Folder Name (Optional)</label>
+                <label>Folder Path (Optional)</label>
                 <input
                   type="text"
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value)}
-                  placeholder="e.g. My Music"
+                  placeholder="e.g. Music/Pop/2026"
                 />
               </div>
 
@@ -134,12 +170,12 @@ function App() {
                   type="text"
                   value={customFilename}
                   onChange={(e) => setCustomFilename(e.target.value)}
-                  placeholder="e.g. Awesome Video"
+                  placeholder="e.g. My Favorite Song"
                 />
               </div>
 
-              <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                {isSubmitting ? 'Starting Transfer...' : 'Transfer to Drive'}
+              <button type="submit" className="btn-primary" disabled={isSubmitting} style={{ width: '100%' }}>
+                {isSubmitting ? 'Processing...' : 'Start Transfer'}
               </button>
             </form>
 
@@ -150,14 +186,14 @@ function App() {
             )}
 
             {jobId && (
-              <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#666' }}>
-                Check your Google Drive root folder in a few minutes.
-                (Real-time progress updates coming soon!)
-              </p>
+              <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Job ID: {jobId} <br />
+                Check your Drive folder in a few minutes.
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

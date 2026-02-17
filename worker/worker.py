@@ -126,24 +126,42 @@ def process_video_download(ydl_opts, url, drive_service, db, job):
                 # Handle Folder Logic
                 parent_id = None
                 if job.get('folder_name'):
-                    folder_name = job['folder_name']
-                    # Search for folder
-                    query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}' and trashed=false"
-                    results = drive_service.files().list(q=query, fields="files(id)").execute()
-                    items = results.get('files', [])
+                    folder_path = job['folder_name'].strip('/')
+                    folders = folder_path.split('/')
                     
-                    if items:
-                        parent_id = items[0]['id']
-                        logging.info(f"Found existing folder '{folder_name}' (ID: {parent_id})")
-                    else:
-                        # Create folder
-                        folder_metadata = {
-                            'name': folder_name,
-                            'mimeType': 'application/vnd.google-apps.folder'
-                        }
-                        folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
-                        parent_id = folder.get('id')
-                        logging.info(f"Created new folder '{folder_name}' (ID: {parent_id})")
+                    current_parent_id = None # Start at root
+                    
+                    for folder_name in folders:
+                        folder_name = folder_name.strip()
+                        if not folder_name: continue
+                        
+                        # Search for folder in current_parent
+                        query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}' and trashed=false"
+                        if current_parent_id:
+                            query += f" and '{current_parent_id}' in parents"
+                        else:
+                            query += " and 'root' in parents"
+                            
+                        results = drive_service.files().list(q=query, fields="files(id)").execute()
+                        items = results.get('files', [])
+                        
+                        if items:
+                            current_parent_id = items[0]['id']
+                            logging.info(f"Found existing folder '{folder_name}' (ID: {current_parent_id})")
+                        else:
+                            # Create folder
+                            folder_metadata = {
+                                'name': folder_name,
+                                'mimeType': 'application/vnd.google-apps.folder'
+                            }
+                            if current_parent_id:
+                                folder_metadata['parents'] = [current_parent_id]
+                                
+                            folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
+                            current_parent_id = folder.get('id')
+                            logging.info(f"Created new folder '{folder_name}' (ID: {current_parent_id})")
+                    
+                    parent_id = current_parent_id
 
                 # Upload to Drive
                 file_metadata = {'name': final_filename}
