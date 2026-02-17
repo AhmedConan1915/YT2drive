@@ -17,7 +17,11 @@ exports.handler = async (event) => {
     // In production, we can use SITE_URL if set, or fall back to the host.
     const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
     const currentOrigin = `${protocol}://${host}`;
-    const siteUrl = isLocal ? currentOrigin : (process.env.SITE_URL || currentOrigin);
+
+    // FIX: Always use the current request's origin for the redirect URI.
+    // This allows it to work on localhost, production, and Deploy Previews automatically.
+    // We ignore process.env.SITE_URL to prevent misconfiguration (e.g. leaving it as localhost).
+    const siteUrl = currentOrigin;
 
     // Use GOOGLE_CLIENT_ID/SECRET as per prompt, but fallback to GDRIVE_ if set
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.GDRIVE_CLIENT_ID;

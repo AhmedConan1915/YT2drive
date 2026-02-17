@@ -36,7 +36,10 @@ exports.handler = async (event) => {
     const protocol = event.headers['x-forwarded-proto'] || 'http';
     const host = event.headers.host;
     const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
-    const siteUrl = isLocal ? `${protocol}://${host}` : (process.env.SITE_URL || `${protocol}://${host}`);
+
+    // FIX: Must match the logic in auth.js exactly.
+    // Always use the current request's origin.
+    const siteUrl = `${protocol}://${host}`;
 
     if (!code) {
         return { statusCode: 400, body: 'Missing code parameter' };
