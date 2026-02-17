@@ -143,6 +143,11 @@ def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file
 def main():
     job_id = os.environ.get("JOB_ID")
     logging.info(f"Starting worker for Job ID: {job_id}")
+    try:
+        version = subprocess.check_output(["yt-dlp", "--version"]).decode("utf-8").strip()
+        logging.info(f"yt-dlp version: {version}")
+    except:
+        logging.warning("Could not check yt-dlp version")
     
     db = get_db()
     job = get_job(db, job_id)
