@@ -79,7 +79,7 @@ function App() {
         // LANDING PAGE FOR GUESTS
         <div className="landing-page">
           <section className="hero-section">
-            <h1>YT2Drive</h1>
+            <h1>Utube2drive</h1>
             <p className="subtitle">
               Professional YouTube to Drive Transfer. <br />
               Save videos directly to your cloud storage in seconds.

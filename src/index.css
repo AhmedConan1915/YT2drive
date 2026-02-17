@@ -1,16 +1,18 @@
 :root {
-  --primary-color: #646cff;
-  --primary-hover: #535bf2;
+  --primary-color: #ff0050;
+  /* Vibrant Red-Pink */
+  --primary-hover: #d9004c;
   --bg-color: #0f172a;
-  --card-bg: #1e293b;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --accent-gradient: linear-gradient(135deg, #646cff 0%, #a855f7 100%);
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --card-bg: rgba(30, 41, 59, 0.6);
+  --text-main: #ffffff;
+  --text-muted: #cbd5e1;
+  /* Fantastic Gradient: Red -> Purple -> Blue */
+  --accent-gradient: linear-gradient(135deg, #ff0050 0%, #a855f7 50%, #4f46e5 100%);
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glow: 0 0 20px rgba(168, 85, 247, 0.4);
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
   color-scheme: dark;
 }
 
@@ -19,7 +21,27 @@ body {
   min-height: 100vh;
   background-color: var(--bg-color);
   color: var(--text-main);
-  background-image: radial-gradient(circle at 50% 0%, #1e1b4b, var(--bg-color));
+  /* Animated Mesh-like Background */
+  background:
+    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+  background-size: 200% 200%;
+  animation: gradientBG 15s ease infinite;
+}
+
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 #root {
@@ -30,67 +52,65 @@ body {
   text-align: center;
 }
 
-/* Typography */
 h1 {
-  font-size: 3.2em;
+  font-size: 4em;
+  font-weight: 800;
   line-height: 1.1;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 0.5rem;
+  filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.3));
 }
 
 h2 {
-  font-size: 2em;
+  font-size: 2.2em;
   margin-bottom: 1rem;
 }
 
 p.subtitle {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   color: var(--text-muted);
   max-width: 600px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 2.5rem;
+  font-weight: 300;
 }
 
-/* Interactive Elements */
 button {
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid transparent;
-  padding: 0.8em 1.6em;
+  padding: 1em 2em;
   font-size: 1em;
   font-weight: 600;
-  font-family: inherit;
   cursor: pointer;
-  transition: all 0.25s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary {
-  background: var(--primary-color);
+  background: var(--accent-gradient);
   color: white;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+  background-size: 200% auto;
 }
 
 .btn-primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  background-position: right center;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
 }
 
 .btn-logout {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-  padding: 0.4em 0.8em;
-  font-size: 0.9em;
+  color: var(--text-main);
+  padding: 0.5em 1.2em;
 }
 
 .btn-logout:hover {
-  color: var(--text-main);
-  border-color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-/* Layout Components */
 .container {
   display: flex;
   flex-direction: column;
@@ -100,16 +120,16 @@ button {
 
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: 24px;
+  padding: 2.5rem;
   width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 550px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-/* Form Styles */
 .input-group {
   margin-bottom: 1.5rem;
   text-align: left;
@@ -118,7 +138,7 @@ button {
 .input-group label {
   display: block;
   margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--text-muted);
   font-weight: 500;
 }
@@ -126,114 +146,100 @@ button {
 input,
 select {
   width: 100%;
-  padding: 0.8rem;
-  border-radius: 8px;
+  padding: 1rem;
+  border-radius: 12px;
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   color: var(--text-main);
   font-size: 1rem;
-  transition: border-color 0.2s;
+  transition: all 0.3s;
   box-sizing: border-box;
-  /* Fix padding issue */
 }
 
 input:focus,
 select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.3);
+  border-color: #a855f7;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1);
 }
 
-/* Landing Page Specifics */
 .hero-section {
-  padding: 4rem 0;
-  animation: fadeIn 0.8s ease-out;
+  padding: 5rem 0;
+  animation: fadeInUp 1s ease-out;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
-  margin: 3rem 0;
+  margin: 4rem 0;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
 }
 
 .feature-card {
   background: var(--card-bg);
-  padding: 1.5rem;
-  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 20px;
   border: 1px solid var(--glass-border);
   text-align: left;
+  transition: transform 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(168, 85, 247, 0.3);
 }
 
 .feature-icon {
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 1rem;
-  background: var(--glass-bg);
-  width: 50px;
-  height: 50px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-}
-
-.feature-title {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text-main);
-}
-
-.feature-desc {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  line-height: 1.6;
-}
-
-.user-profile-mini {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  max-width: 500px;
-  margin-bottom: 1rem;
-  padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 50px;
+  border-radius: 16px;
   border: 1px solid var(--glass-border);
-  font-size: 0.9rem;
 }
 
-/* Status Messages */
 .status-card {
   margin-top: 1.5rem;
   padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-radius: 12px;
+  font-weight: 600;
+  animation: fadeIn 0.5s;
 }
 
 .status-card.success {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .status-card.error {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.2);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-@keyframes fadeIn {
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
   }
 }
