@@ -64,7 +64,9 @@ def setup_cookies():
 def get_video_items(youtube_url, cookies_file=None):
     # Retrieve metadata (flat playlist) to handle single video or playlist
     cmd = [
-        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings", "--js-runtimes", "node"
+        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings", 
+        "--js-runtimes", "node",
+        "--extractor-args", "youtube:player_client=android,web"
     ]
     if cookies_file:
         cmd.extend(["--cookies", cookies_file])
@@ -146,8 +148,10 @@ def main():
     try:
         version = subprocess.check_output(["yt-dlp", "--version"]).decode("utf-8").strip()
         logging.info(f"yt-dlp version: {version}")
-    except:
-        logging.warning("Could not check yt-dlp version")
+        node_version = subprocess.check_output(["node", "--version"]).decode("utf-8").strip()
+        logging.info(f"node version: {node_version}")
+    except Exception as e:
+        logging.warning(f"Metadata check failed: {e}")
     
     db = get_db()
     job = get_job(db, job_id)
