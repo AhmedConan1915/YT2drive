@@ -66,7 +66,7 @@ def get_video_items(youtube_url, cookies_file=None):
     cmd = [
         "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings", 
         "--js-runtimes", "node",
-        "--extractor-args", "youtube:player_client=android,web"
+        "--extractor-args", "youtube:player_client=ios"
     ]
     if cookies_file:
         cmd.extend(["--cookies", cookies_file])
@@ -114,7 +114,7 @@ def stream_video_to_drive(video_url, drive_service, quality='best', cookies_file
 
     logging.info(f"Streaming: {filename}")
 
-    cmd_download = ["yt-dlp", "-f", quality, "-o", "-", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=android,web"]
+    cmd_download = ["yt-dlp", "-f", quality, "-o", "-", "--js-runtimes", "node", "--extractor-args", "youtube:player_client=ios"]
     if cookies_file:
         cmd_download.extend(["--cookies", cookies_file])
     cmd_download.append(video_url)
