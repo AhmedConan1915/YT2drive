@@ -99,8 +99,8 @@ def main():
             'ignoreerrors': True, # Skip unavailable videos in playlist
             'restrictfilenames': True, # Avoid weird characters in filename
             # Use specific extractor args to help with "n challenge" and bot detection
-            # Simplified to 'android' only as it is often more robust against challenges than 'web'
-            'extractor_args': {'youtube': {'player_client': ['android']}},
+            # Use 'android' for video/audio streams and 'web' for cookies/auth
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
         
