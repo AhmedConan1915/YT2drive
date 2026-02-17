@@ -109,6 +109,9 @@ def main():
                 info = ydl.extract_info(url, download=False)
             except Exception as e:
                 raise Exception(f"Failed to fetch metadata: {e}")
+            
+            if not info:
+                 raise Exception("Failed to extract video info (None returned). Check logs for yt-dlp errors.")
 
             if 'entries' in info:
                 # Playlist
